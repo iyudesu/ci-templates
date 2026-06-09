@@ -1,0 +1,27 @@
+name: Publish Images
+
+on:
+  push:
+    tags:
+      - 'v*'   # ← semantic version tags
+
+jobs:
+  go:
+    uses: ./.github/workflows/reusable/docker.yml
+    with:
+      service: go
+
+  node:
+    uses: ./.github/workflows/reusable/docker.yml
+    with:
+      service: node-js
+
+  python:
+    uses: ./.github/workflows/reusable/docker.yml
+    with:
+      service: python
+
+  rust:
+    uses: ./.github/workflows/reusable/docker.yml
+    with:
+      service: rust

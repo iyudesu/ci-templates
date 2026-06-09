@@ -1,0 +1,13 @@
+name: Rust CI
+
+on:
+  push:
+    branches: ['**']
+    paths: ['rust/**']
+  pull_request:
+    branches: ['**', '!main'] 
+    paths: ['rust/**']
+
+jobs:
+  call:
+    uses: ./.github/workflows/reusable/rust.yml
