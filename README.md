@@ -46,7 +46,7 @@ repo-root/
 │   ├── rust-ci.yml
 │   ├── release.yml
 │   ├── publish.yml
-│   └── reusable/
+│   └── reusables/
 │       ├── go.yml
 │       ├── node.yml
 │       ├── python.yml
@@ -54,7 +54,7 @@ repo-root/
 │       └── docker.yml
 │
 ├── .releaserc.go.json
-├── .releaserc.node.json
+├── .releaserc.node-js.json
 ├── .releaserc.python.json
 ├── .releaserc.rust.json
 │
@@ -180,10 +180,13 @@ File: `.github/workflows/release.yml`
 
 # 🐳 Docker Publishing
 
-Triggered by Git tags:
+Triggered by per-service Git tags:
 
 ```
-v*
+go-v*
+node-v*
+python-v*
+rust-v*
 ```
 
 ## Image Naming
@@ -281,15 +284,15 @@ go run ./cmd
 
 ```sh
 cd node-js
-# Run
-npm install
+# Install
+npm ci
+# Run (build first)
+npm run build
 npm start
 # Lint & fix
-npm init @eslint/config@latest
 npx eslint .
 npx eslint . --fix
 # Test
-npm install -D vitest
 npx vitest run
 ```
 

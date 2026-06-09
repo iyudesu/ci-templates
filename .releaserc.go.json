@@ -1,0 +1,16 @@
+{
+  "branches": ["main"],
+  "tagFormat": "go-v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "releaseRules": [
+        { "scope": "go", "breaking": true, "release": "major" },
+        { "scope": "go", "type": "feat", "release": "minor" },
+        { "scope": "go", "type": "fix", "release": "patch" },
+        { "scope": "go", "type": "perf", "release": "patch" }
+      ]
+    }],
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github"
+  ]
+}

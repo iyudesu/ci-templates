@@ -12,7 +12,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: node-js/package-lock.json
 
@@ -23,7 +23,7 @@ jobs:
       - name: Lint
         run: |
           cd node-js
-          npx eslint . || true
+          npx eslint .
 
       - name: Build
         run: |
@@ -33,5 +33,4 @@ jobs:
       - name: Test
         run: |
           cd node-js
-          npm install vitest
           npx vitest run

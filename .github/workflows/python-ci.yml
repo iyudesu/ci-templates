@@ -10,4 +10,4 @@ on:
 
 jobs:
   call:
-    uses: ./.github/workflows/reusable/python.yml
+    uses: ./.github/workflows/reusables/python.yml

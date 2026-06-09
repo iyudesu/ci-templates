@@ -1,0 +1,16 @@
+{
+  "branches": ["main"],
+  "tagFormat": "rust-v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "releaseRules": [
+        { "scope": "rust", "breaking": true, "release": "major" },
+        { "scope": "rust", "type": "feat", "release": "minor" },
+        { "scope": "rust", "type": "fix", "release": "patch" },
+        { "scope": "rust", "type": "perf", "release": "patch" }
+      ]
+    }],
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github"
+  ]
+}

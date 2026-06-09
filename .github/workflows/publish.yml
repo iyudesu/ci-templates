@@ -3,25 +3,32 @@ name: Publish Images
 on:
   push:
     tags:
-      - 'v*'   # ← semantic version tags
+      - 'go-v*'
+      - 'node-v*'
+      - 'python-v*'
+      - 'rust-v*'
 
 jobs:
   go:
-    uses: ./.github/workflows/reusable/docker.yml
+    if: startsWith(github.ref, 'refs/tags/go-v')
+    uses: ./.github/workflows/reusables/docker.yml
     with:
       service: go
 
   node:
-    uses: ./.github/workflows/reusable/docker.yml
+    if: startsWith(github.ref, 'refs/tags/node-v')
+    uses: ./.github/workflows/reusables/docker.yml
     with:
       service: node-js
 
   python:
-    uses: ./.github/workflows/reusable/docker.yml
+    if: startsWith(github.ref, 'refs/tags/python-v')
+    uses: ./.github/workflows/reusables/docker.yml
     with:
       service: python
 
   rust:
-    uses: ./.github/workflows/reusable/docker.yml
+    if: startsWith(github.ref, 'refs/tags/rust-v')
+    uses: ./.github/workflows/reusables/docker.yml
     with:
       service: rust

@@ -1,0 +1,16 @@
+{
+  "branches": ["main"],
+  "tagFormat": "node-v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "releaseRules": [
+        { "scope": "node", "breaking": true, "release": "major" },
+        { "scope": "node", "type": "feat", "release": "minor" },
+        { "scope": "node", "type": "fix", "release": "patch" },
+        { "scope": "node", "type": "perf", "release": "patch" }
+      ]
+    }],
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github"
+  ]
+}

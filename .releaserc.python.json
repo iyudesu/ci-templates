@@ -1,0 +1,16 @@
+{
+  "branches": ["main"],
+  "tagFormat": "python-v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "releaseRules": [
+        { "scope": "python", "breaking": true, "release": "major" },
+        { "scope": "python", "type": "feat", "release": "minor" },
+        { "scope": "python", "type": "fix", "release": "patch" },
+        { "scope": "python", "type": "perf", "release": "patch" }
+      ]
+    }],
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github"
+  ]
+}

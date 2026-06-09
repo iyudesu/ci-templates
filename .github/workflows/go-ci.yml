@@ -10,4 +10,4 @@ on:
 
 jobs:
   call:
-    uses: ./.github/workflows/reusable/go.yml
+    uses: ./.github/workflows/reusables/go.yml
