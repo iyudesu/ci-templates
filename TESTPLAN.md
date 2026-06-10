@@ -80,7 +80,8 @@ To view details of a run:
 **Pass criteria:**
 - 4 separate workflow runs appear, one per service
 - Each run calls its reusable workflow (visible as a nested job)
-- Lint, build, and test steps all pass without `|| true` masking
+- Lint step may show as yellow ⚠ (warning) due to `continue-on-error: true` — this is expected
+- Build and test steps must be green ✓ — these are blocking and will fail the job if they error
 
 ---
 

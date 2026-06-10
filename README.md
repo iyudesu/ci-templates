@@ -16,20 +16,19 @@ This repository is a **polyglot monorepo** designed for scalable microservices d
 repo-root/
 │
 ├── go/                  # Go service
-│   ├── cmd/
-│   ├── pkg/
+│   ├── main.go
 │   ├── go.mod
-│   ├── go.sum
 │   └── Dockerfile
 │
 ├── node-js/             # Node.js service
-│   ├── src/
+│   ├── src/             # app.js, app.test.js
 │   ├── package.json
 │   ├── package-lock.json
 │   └── Dockerfile
 │
 ├── python/              # Python service
-│   ├── app/
+│   ├── app.py
+│   ├── test_app.py
 │   ├── requirements.txt
 │   └── Dockerfile
 │
@@ -111,7 +110,7 @@ Each service has its own CI pipeline:
 * ✅ Build + Test
   - For Go, using built-in test 
   - [vitest](https://github.com/vitest-dev/vitest) (Node.js)
-  - [pytest]() (Python)
+  - [pytest](https://docs.pytest.org) (Python)
   - For Rust, using built-in test 
 * ✅ Dependency caching
 
@@ -264,35 +263,13 @@ permissions:
 
 # 🧩 Adding a New Service
 
-1. Create folder:
-
-```
-/new-service
-```
-
-2. Add:
-
-* `Dockerfile`
-* Build/test config
-
-3. Create:
-
-```
-.releaserc.new-service.json
-```
-
-4. Add workflow:
-
-```
-.github/workflows/new-service-ci.yml
-```
-
-5. Update:
-
-```
-release.yml (matrix)
-publish.yml (matrix)
-```
+1. Create `/<service>/` with source code, `Dockerfile`, and build/test config
+2. Add test file (`test_*.py`, `*.test.js`, etc.)
+3. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
+4. Add `.github/workflows/reusable-<service>.yml` (lint / build / test steps)
+5. Create `.releaserc.<service>.json` with scoped release rules and `tagFormat`
+6. Add `<service>` to the `matrix` in `release.yml`
+7. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`
 
 ---
 

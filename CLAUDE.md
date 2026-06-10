@@ -59,16 +59,19 @@ The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime 
 
 ### CI/CD Flow
 ```
-push to any branch (with path changes)
+push to any branch (service files or its workflow files changed)
     → service-specific CI (go-ci.yml / node-ci.yml / python-ci.yml / rust-ci.yml)
-        → delegates to reusable-<service>.yml (lint + build + test)
+        → delegates to reusable-<service>.yml
+            → lint (continue-on-error) → build → test
 
-merge to main + per-service tag pushed
-    → publish.yml
-        → reusable-docker.yml (build & push to GHCR)
+merge to main
+    → release.yml
+        → semantic-release per service → creates per-service tag (e.g. go-v1.2.0)
+            → publish.yml
+                → reusable-docker.yml (build & push to GHCR)
 ```
 
-Each CI workflow only triggers when files under its service directory change (`paths: ['go/**']` etc.), so unrelated services are never re-tested.
+Each CI workflow triggers when files under its service directory **or** its own workflow files change (e.g. `go/**`, `.github/workflows/go-ci.yml`, `.github/workflows/reusable-go.yml`). Lint steps use `continue-on-error: true` — failures are reported as warnings but do not block build or test.
 
 ### Reusable Workflows
 Named `reusable-<service>.yml` and `reusable-docker.yml`, all at the top level of `.github/workflows/`. GitHub Actions requires local `./` workflow references to be at the top level — subdirectories are not supported for local paths. Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
