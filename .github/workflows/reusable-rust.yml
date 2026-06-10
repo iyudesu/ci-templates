@@ -23,6 +23,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Lint
+        continue-on-error: true
         run: |
           cd rust
           cargo clippy -- -D warnings

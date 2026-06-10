@@ -304,7 +304,14 @@ Example:
 
 ```sh
 cd go
-go run ./cmd
+# Run
+go run .
+# Build
+go build ./...
+# Lint (requires golangci-lint: https://golangci-lint.run/welcome/install/)
+golangci-lint run
+# Test
+go test ./...
 ```
 
 ### Node.js
