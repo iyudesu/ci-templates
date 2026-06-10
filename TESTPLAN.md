@@ -4,15 +4,15 @@
 
 | Action | Workflow triggered |
 |--------|-------------------|
-| Push to any branch with `go/**` changes | `go-ci.yml` → `reusables/go.yml` |
-| Push to any branch with `node-js/**` changes | `node-ci.yml` → `reusables/node.yml` |
-| Push to any branch with `python/**` changes | `python-ci.yml` → `reusables/python.yml` |
-| Push to any branch with `rust/**` changes | `rust-ci.yml` → `reusables/rust.yml` |
+| Push to any branch with `go/**` changes | `go-ci.yml` → `reusable-go.yml` |
+| Push to any branch with `node-js/**` changes | `node-ci.yml` → `reusable-node.yml` |
+| Push to any branch with `python/**` changes | `python-ci.yml` → `reusable-python.yml` |
+| Push to any branch with `rust/**` changes | `rust-ci.yml` → `reusable-rust.yml` |
 | Push to `main` | `release.yml` (semantic-release per service) |
-| Tag `go-v*` pushed | `publish.yml` → `reusables/docker.yml` (go job only) |
-| Tag `node-v*` pushed | `publish.yml` → `reusables/docker.yml` (node job only) |
-| Tag `python-v*` pushed | `publish.yml` → `reusables/docker.yml` (python job only) |
-| Tag `rust-v*` pushed | `publish.yml` → `reusables/docker.yml` (rust job only) |
+| Tag `go-v*` pushed | `publish.yml` → `reusable-docker.yml` (go job only) |
+| Tag `node-v*` pushed | `publish.yml` → `reusable-docker.yml` (node job only) |
+| Tag `python-v*` pushed | `publish.yml` → `reusable-docker.yml` (python job only) |
+| Tag `rust-v*` pushed | `publish.yml` → `reusable-docker.yml` (rust job only) |
 
 ---
 
@@ -26,7 +26,7 @@ brew install actionlint
 actionlint --version
 
 # Run against all workflows
-actionlint .github/workflows/*.yml .github/workflows/reusables/*.yml
+actionlint .github/workflows/*.yml
 ```
 
 Basic YAML lint:
@@ -63,23 +63,25 @@ touch rust/.ci-test && git add rust/.ci-test && git commit -m "test(rust): trigg
 git push origin test/ci-validation
 ```
 
-Monitor runs:
+Monitor runs in the GitHub Actions UI:
 
-```sh
-gh run list --branch test/ci-validation
-gh run watch        # streams the latest run live
-```
+1. Go to your repository on GitHub
+2. Click the **Actions** tab
+3. Filter by branch: use the branch dropdown and select `test/ci-validation`
+4. Confirm 4 separate workflow runs appear — one per service
 
-View logs for a failed run:
+To view details of a run:
 
-```sh
-gh run view <run-id> --log-failed
-```
+1. Click the workflow run name (e.g. **Go CI**)
+2. Click the `call` job to expand it
+3. Click into the reusable workflow job to see each step (Lint / Build / Test)
+4. A red ✗ on any step means it failed — click the step to expand the log
 
 **Pass criteria:**
 - 4 separate workflow runs appear, one per service
 - Each run calls its reusable workflow (visible as a nested job)
-- Lint, build, and test steps all pass without `|| true` masking
+- Lint step may show as yellow ⚠ (warning) due to `continue-on-error: true` — this is expected
+- Build and test steps must be green ✓ — these are blocking and will fail the job if they error
 
 ---
 
@@ -95,12 +97,13 @@ git commit -m "fix(go): correct health check response message"
 git push origin main
 ```
 
-Monitor the release run:
+Monitor the release run in the GitHub Actions UI:
 
-```sh
-gh run list --workflow=release.yml
-gh run watch
-```
+1. Go to the **Actions** tab
+2. Click **Release** in the left sidebar
+3. Click the latest run to open it
+4. The matrix shows 4 parallel jobs — expand the `go` job to see semantic-release output
+5. A successful release prints: `Published release X.X.X`
 
 Verify the tag was created:
 
@@ -109,20 +112,22 @@ git fetch --tags
 git tag -l "go-v*"
 ```
 
+Or on GitHub: go to **Code** → **Tags** and confirm a `go-v*` tag appears.
+
 **Pass criteria:**
 - `release.yml` runs a matrix of 4 jobs (one per service)
 - Only the `go` job creates a new tag (others find no releasable commits)
-- A `go-v*` tag appears in the repository
+- A `go-v*` tag appears under **Code → Tags**
 
 ---
 
 ## Step 4 — Test the Publish Workflow
 
-If Step 3 succeeded, the `go-v*` tag push should have auto-triggered `publish.yml`. Verify:
+If Step 3 succeeded, the `go-v*` tag push auto-triggers `publish.yml`. To verify:
 
-```sh
-gh run list --workflow=publish.yml
-```
+1. Go to the **Actions** tab
+2. Click **Publish Images** in the left sidebar
+3. Open the latest run triggered by the `go-v*` tag
 
 To trigger manually without going through semantic-release:
 
@@ -131,15 +136,20 @@ git tag go-v0.0.1-test
 git push origin go-v0.0.1-test
 ```
 
+Inspect the run:
+
+1. Open the **Publish Images** run in the **Actions** tab
+2. Confirm only the **go** job ran — `node`, `python`, and `rust` jobs should show as **skipped** (grey, not green or red)
+3. Inside the `go` job, expand **Build & Push** to confirm the image was pushed to GHCR
+
+Verify the image exists:
+
+1. Go to your GitHub profile → **Packages**
+2. Confirm a new package named after the service appears with the pushed tag
+
 **Pass criteria:**
-- Only the `go` job runs — the `node`, `python`, and `rust` jobs are skipped by their `if:` guards
-- The Docker image is pushed to GHCR
-
-Verify the image exists in GHCR:
-
-```sh
-gh api /user/packages?package_type=container | jq '.[].name'
-```
+- Only the `go` job runs — all other jobs show as skipped
+- The Docker image appears under **Packages** with the correct tag
 
 ---
 
@@ -154,7 +164,11 @@ pull_request:
 
 This means opening a PR to `main` does **not** trigger CI — only the post-merge push does.
 
-To test this behavior: open a PR from `test/ci-validation` → `main` and confirm no CI run is triggered for the PR itself.
+To test this behavior:
+
+1. Open a PR from `test/ci-validation` → `main` on GitHub
+2. Go to the **Actions** tab and confirm no new CI run appears for the PR
+3. The PR status checks section should show no pending checks
 
 If pre-merge CI on `main` PRs is required, update each `*-ci.yml`:
 
@@ -167,10 +181,12 @@ pull_request:
 
 ## Cleanup
 
-Remove test commits and tags after validation:
+Remove test branches and tags:
 
 ```sh
 git push origin --delete test/ci-validation
 git tag -d go-v0.0.1-test
 git push origin --delete go-v0.0.1-test
 ```
+
+On GitHub, confirm the branch and tag are gone under **Code → Branches** and **Code → Tags**.

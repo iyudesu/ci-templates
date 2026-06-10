@@ -12,17 +12,17 @@ func greetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hello this is code from Go!"))
+	_, _ = w.Write([]byte("Hello this is code from Go!"))
 }
 
 func healthCheckReadinessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := os.Stat("/tmp/ready"); err == nil {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("200 OK, it's ready!"))
+		_, _ = w.Write([]byte("200 OK, it's ready!"))
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("503 Service unavailable, it's not ready!"))
+		_, _ = w.Write([]byte("503 Service unavailable, it's not ready!"))
 	}
 }
 
@@ -30,10 +30,10 @@ func healthCheckLivenessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := os.Stat("/tmp/ready"); err == nil {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("200 OK, it lives!"))
+		_, _ = w.Write([]byte("200 OK, it lives!"))
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("503 Service unavailable, it doesn't live!"))
+		_, _ = w.Write([]byte("503 Service unavailable, it doesn't live!"))
 	}
 }
 

@@ -16,20 +16,19 @@ This repository is a **polyglot monorepo** designed for scalable microservices d
 repo-root/
 │
 ├── go/                  # Go service
-│   ├── cmd/
-│   ├── pkg/
+│   ├── main.go
 │   ├── go.mod
-│   ├── go.sum
 │   └── Dockerfile
 │
 ├── node-js/             # Node.js service
-│   ├── src/
+│   ├── src/             # app.js, app.test.js
 │   ├── package.json
 │   ├── package-lock.json
 │   └── Dockerfile
 │
 ├── python/              # Python service
-│   ├── app/
+│   ├── app.py
+│   ├── test_app.py
 │   ├── requirements.txt
 │   └── Dockerfile
 │
@@ -46,12 +45,11 @@ repo-root/
 │   ├── rust-ci.yml
 │   ├── release.yml
 │   ├── publish.yml
-│   └── reusables/
-│       ├── go.yml
-│       ├── node.yml
-│       ├── python.yml
-│       ├── rust.yml
-│       └── docker.yml
+│   ├── reusable-go.yml
+│   ├── reusable-node.yml
+│   ├── reusable-python.yml
+│   ├── reusable-rust.yml
+│   └── reusable-docker.yml
 │
 ├── .releaserc.go.json
 ├── .releaserc.node-js.json
@@ -112,7 +110,7 @@ Each service has its own CI pipeline:
 * ✅ Build + Test
   - For Go, using built-in test 
   - [vitest](https://github.com/vitest-dev/vitest) (Node.js)
-  - [pytest]() (Python)
+  - [pytest](https://docs.pytest.org) (Python)
   - For Rust, using built-in test 
 * ✅ Dependency caching
 
@@ -120,11 +118,17 @@ Each service has its own CI pipeline:
 
 # 🔁 Reusable Workflows
 
-Located in:
+Located at the top level of `.github/workflows/`, named with a `reusable-` prefix:
 
-```sh
-.github/workflows/reusables/
 ```
+reusable-go.yml
+reusable-node.yml
+reusable-python.yml
+reusable-rust.yml
+reusable-docker.yml
+```
+
+> **Why top-level?** GitHub Actions only supports local `./` reusable workflow references at the top level of `.github/workflows/`. Subdirectories are not supported for local paths — they require the full `owner/repo/...@ref` format instead.
 
 Purpose:
 
@@ -259,35 +263,13 @@ permissions:
 
 # 🧩 Adding a New Service
 
-1. Create folder:
-
-```
-/new-service
-```
-
-2. Add:
-
-* `Dockerfile`
-* Build/test config
-
-3. Create:
-
-```
-.releaserc.new-service.json
-```
-
-4. Add workflow:
-
-```
-.github/workflows/new-service-ci.yml
-```
-
-5. Update:
-
-```
-release.yml (matrix)
-publish.yml (matrix)
-```
+1. Create `/<service>/` with source code, `Dockerfile`, and build/test config
+2. Add test file (`test_*.py`, `*.test.js`, etc.)
+3. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
+4. Add `.github/workflows/reusable-<service>.yml` (lint / build / test steps)
+5. Create `.releaserc.<service>.json` with scoped release rules and `tagFormat`
+6. Add `<service>` to the `matrix` in `release.yml`
+7. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`
 
 ---
 
@@ -299,7 +281,14 @@ Example:
 
 ```sh
 cd go
-go run ./cmd
+# Run
+go run .
+# Build
+go build ./...
+# Lint (requires golangci-lint: https://golangci-lint.run/welcome/install/)
+golangci-lint run
+# Test
+go test ./...
 ```
 
 ### Node.js

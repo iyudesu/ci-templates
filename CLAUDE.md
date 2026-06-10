@@ -59,22 +59,25 @@ The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime 
 
 ### CI/CD Flow
 ```
-push to any branch (with path changes)
+push to any branch (service files or its workflow files changed)
     → service-specific CI (go-ci.yml / node-ci.yml / python-ci.yml / rust-ci.yml)
-        → delegates to .github/workflows/reusables/<service>.yml (lint + build + test)
+        → delegates to reusable-<service>.yml
+            → lint (continue-on-error) → build → test
 
-merge to main + v* tag pushed
-    → publish.yml
-        → .github/workflows/reusables/docker.yml (build & push to GHCR)
+merge to main
+    → release.yml
+        → semantic-release per service → creates per-service tag (e.g. go-v1.2.0)
+            → publish.yml
+                → reusable-docker.yml (build & push to GHCR)
 ```
 
-Each CI workflow only triggers when files under its service directory change (`paths: ['go/**']` etc.), so unrelated services are never re-tested.
+Each CI workflow triggers when files under its service directory **or** its own workflow files change (e.g. `go/**`, `.github/workflows/go-ci.yml`, `.github/workflows/reusable-go.yml`). Lint steps use `continue-on-error: true` — failures are reported as warnings but do not block build or test.
 
 ### Reusable Workflows
-Located in `.github/workflows/reusables/` (note: `reusables`, not `reusable`). Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
+Named `reusable-<service>.yml` and `reusable-docker.yml`, all at the top level of `.github/workflows/`. GitHub Actions requires local `./` workflow references to be at the top level — subdirectories are not supported for local paths. Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
 
 ### Docker Images
-Published to `ghcr.io/<owner>/<repo>/<service>:<tag>` on any `v*` tag push. Authentication uses the built-in `GITHUB_TOKEN` — no manual secret setup needed. Required workflow permissions: `contents: read`, `packages: write`.
+Published to `ghcr.io/<owner>/<repo>/<service>:<tag>` on per-service tag push (`go-v*`, `node-v*`, etc.). Authentication uses the built-in `GITHUB_TOKEN` — no manual secret setup needed. Required workflow permissions: `contents: read`, `packages: write`.
 
 ## Commit Convention
 
@@ -92,5 +95,5 @@ The scope (`go`, `node`, `python`, `rust`) determines which service gets a new v
 
 1. Create `/<service>/` with a `Dockerfile` and build/test config
 2. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
-3. Add `.github/workflows/reusables/<service>.yml` (the actual lint/build/test steps)
-4. Add `<service>` as a new job in `publish.yml` calling `reusables/docker.yml`
+3. Add `.github/workflows/reusable-<service>.yml` (the actual lint/build/test steps)
+4. Add `<service>` as a new job in `publish.yml` calling `reusable-docker.yml`
