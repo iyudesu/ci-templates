@@ -3,10 +3,16 @@ name: Python CI
 on:
   push:
     branches: ['**']
-    paths: ['python/**']
+    paths:
+      - 'python/**'
+      - '.github/workflows/python-ci.yml'
+      - '.github/workflows/reusable-python.yml'
   pull_request:
     branches: ['**', '!main']
-    paths: ['python/**']
+    paths:
+      - 'python/**'
+      - '.github/workflows/python-ci.yml'
+      - '.github/workflows/reusable-python.yml'
 
 jobs:
   call:

@@ -3,10 +3,16 @@ name: Node CI
 on:
   push:
     branches: ['**']
-    paths: ['node-js/**']
+    paths:
+      - 'node-js/**'
+      - '.github/workflows/node-ci.yml'
+      - '.github/workflows/reusable-node.yml'
   pull_request:
     branches: ['**', '!main']
-    paths: ['node-js/**']
+    paths:
+      - 'node-js/**'
+      - '.github/workflows/node-ci.yml'
+      - '.github/workflows/reusable-node.yml'
 
 jobs:
   call:

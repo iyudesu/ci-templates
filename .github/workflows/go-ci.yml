@@ -3,10 +3,16 @@ name: Go CI
 on:
   push:
     branches: ['**']
-    paths: ['go/**']
+    paths:
+      - 'go/**'
+      - '.github/workflows/go-ci.yml'
+      - '.github/workflows/reusable-go.yml'
   pull_request:
     branches: ['**', '!main']
-    paths: ['go/**']
+    paths:
+      - 'go/**'
+      - '.github/workflows/go-ci.yml'
+      - '.github/workflows/reusable-go.yml'
 
 jobs:
   call:
