@@ -10,4 +10,4 @@ on:
 
 jobs:
   call:
-    uses: ./.github/workflows/reusables/node.yml
+    uses: ./.github/workflows/reusable-node.yml

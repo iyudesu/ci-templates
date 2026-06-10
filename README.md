@@ -46,12 +46,11 @@ repo-root/
 │   ├── rust-ci.yml
 │   ├── release.yml
 │   ├── publish.yml
-│   └── reusables/
-│       ├── go.yml
-│       ├── node.yml
-│       ├── python.yml
-│       ├── rust.yml
-│       └── docker.yml
+│   ├── reusable-go.yml
+│   ├── reusable-node.yml
+│   ├── reusable-python.yml
+│   ├── reusable-rust.yml
+│   └── reusable-docker.yml
 │
 ├── .releaserc.go.json
 ├── .releaserc.node-js.json
@@ -120,11 +119,17 @@ Each service has its own CI pipeline:
 
 # 🔁 Reusable Workflows
 
-Located in:
+Located at the top level of `.github/workflows/`, named with a `reusable-` prefix:
 
-```sh
-.github/workflows/reusables/
 ```
+reusable-go.yml
+reusable-node.yml
+reusable-python.yml
+reusable-rust.yml
+reusable-docker.yml
+```
+
+> **Why top-level?** GitHub Actions only supports local `./` reusable workflow references at the top level of `.github/workflows/`. Subdirectories are not supported for local paths — they require the full `owner/repo/...@ref` format instead.
 
 Purpose:
 

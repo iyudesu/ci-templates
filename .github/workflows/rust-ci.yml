@@ -10,4 +10,4 @@ on:
 
 jobs:
   call:
-    uses: ./.github/workflows/reusables/rust.yml
+    uses: ./.github/workflows/reusable-rust.yml

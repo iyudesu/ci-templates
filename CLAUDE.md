@@ -61,20 +61,20 @@ The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime 
 ```
 push to any branch (with path changes)
     → service-specific CI (go-ci.yml / node-ci.yml / python-ci.yml / rust-ci.yml)
-        → delegates to .github/workflows/reusables/<service>.yml (lint + build + test)
+        → delegates to reusable-<service>.yml (lint + build + test)
 
-merge to main + v* tag pushed
+merge to main + per-service tag pushed
     → publish.yml
-        → .github/workflows/reusables/docker.yml (build & push to GHCR)
+        → reusable-docker.yml (build & push to GHCR)
 ```
 
 Each CI workflow only triggers when files under its service directory change (`paths: ['go/**']` etc.), so unrelated services are never re-tested.
 
 ### Reusable Workflows
-Located in `.github/workflows/reusables/` (note: `reusables`, not `reusable`). Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
+Named `reusable-<service>.yml` and `reusable-docker.yml`, all at the top level of `.github/workflows/`. GitHub Actions requires local `./` workflow references to be at the top level — subdirectories are not supported for local paths. Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
 
 ### Docker Images
-Published to `ghcr.io/<owner>/<repo>/<service>:<tag>` on any `v*` tag push. Authentication uses the built-in `GITHUB_TOKEN` — no manual secret setup needed. Required workflow permissions: `contents: read`, `packages: write`.
+Published to `ghcr.io/<owner>/<repo>/<service>:<tag>` on per-service tag push (`go-v*`, `node-v*`, etc.). Authentication uses the built-in `GITHUB_TOKEN` — no manual secret setup needed. Required workflow permissions: `contents: read`, `packages: write`.
 
 ## Commit Convention
 
@@ -92,5 +92,5 @@ The scope (`go`, `node`, `python`, `rust`) determines which service gets a new v
 
 1. Create `/<service>/` with a `Dockerfile` and build/test config
 2. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
-3. Add `.github/workflows/reusables/<service>.yml` (the actual lint/build/test steps)
-4. Add `<service>` as a new job in `publish.yml` calling `reusables/docker.yml`
+3. Add `.github/workflows/reusable-<service>.yml` (the actual lint/build/test steps)
+4. Add `<service>` as a new job in `publish.yml` calling `reusable-docker.yml`
