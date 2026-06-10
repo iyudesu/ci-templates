@@ -58,6 +58,7 @@ repo-root/
 ├── .releaserc.python.json
 ├── .releaserc.rust.json
 │
+├── .yamllint.yml        # yamllint rule overrides for GitHub Actions
 ├── package.json         # semantic-release dependencies
 ├── package-lock.json
 │
@@ -122,7 +123,7 @@ Each service has its own CI pipeline:
 Located in:
 
 ```sh
-.github/workflows/reusable/
+.github/workflows/reusables/
 ```
 
 Purpose:
@@ -130,6 +131,27 @@ Purpose:
 * Avoid duplication
 * Standardize CI logic
 * Easy to scale
+
+---
+
+# 🔍 YAML Linting
+
+Workflow files are validated locally with [yamllint](https://github.com/adrienverge/yamllint).
+
+```sh
+pip3 install yamllint
+yamllint .github/workflows/
+```
+
+### Configuration — `.yamllint.yml`
+
+GitHub Actions YAML has conventions that conflict with yamllint's defaults. The `.yamllint.yml` file at the repo root overrides three rules:
+
+| Rule | Setting | Reason |
+| ---- | ------- | ------ |
+| `truthy` | `check-keys: false` | GitHub Actions requires the bare `on:` trigger key. YAML 1.1 parses it as boolean `true`, which yamllint flags. Quoting it as `"on":` breaks nothing but deviates from universal Actions convention — so key checking is disabled instead. |
+| `document-start` | `disable` | `---` document start is optional in YAML and is not used in GitHub Actions files by convention. |
+| `line-length` | `max: 120` | GitHub Actions expressions (`${{ secrets.TOKEN }}`) and Docker commands naturally exceed the 80-char default. 120 is a reasonable limit for CI YAML. |
 
 ---
 

@@ -5,7 +5,7 @@ on:
     branches: ['**']
     paths: ['go/**']
   pull_request:
-    branches: ['**', '!main'] 
+    branches: ['**', '!main']
     paths: ['go/**']
 
 jobs:

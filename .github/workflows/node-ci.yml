@@ -5,7 +5,7 @@ on:
     branches: ['**']
     paths: ['node-js/**']
   pull_request:
-    branches: ['**', '!main'] 
+    branches: ['**', '!main']
     paths: ['node-js/**']
 
 jobs:

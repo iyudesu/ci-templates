@@ -5,7 +5,7 @@ on:
     branches: ['**']
     paths: ['rust/**']
   pull_request:
-    branches: ['**', '!main'] 
+    branches: ['**', '!main']
     paths: ['rust/**']
 
 jobs:

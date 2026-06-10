@@ -18,13 +18,13 @@ jobs:
         id: version
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Login GHCR
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build & Push
         run: |
           IMAGE=ghcr.io/${{ github.repository }}/${{ inputs.service }}
-          docker build -t $IMAGE:${{ steps.version.outputs.version }} ./${{ inputs.service }}
-          docker push $IMAGE:${{ steps.version.outputs.version }}
+          docker build -t "$IMAGE:${{ steps.version.outputs.version }}" "./${{ inputs.service }}"
+          docker push "$IMAGE:${{ steps.version.outputs.version }}"
