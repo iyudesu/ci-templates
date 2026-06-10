@@ -2,17 +2,17 @@
 
 ## Trigger Reference
 
-| Action | Workflow triggered |
-|--------|-------------------|
-| Push to any branch with `go/**` changes | `go-ci.yml` → `reusable-go.yml` |
-| Push to any branch with `node-js/**` changes | `node-ci.yml` → `reusable-node.yml` |
-| Push to any branch with `python/**` changes | `python-ci.yml` → `reusable-python.yml` |
-| Push to any branch with `rust/**` changes | `rust-ci.yml` → `reusable-rust.yml` |
-| Push to `main` | `release.yml` (semantic-release per service) |
-| Tag `go-v*` pushed | `publish.yml` → `reusable-docker.yml` (go job only) |
-| Tag `node-v*` pushed | `publish.yml` → `reusable-docker.yml` (node job only) |
-| Tag `python-v*` pushed | `publish.yml` → `reusable-docker.yml` (python job only) |
-| Tag `rust-v*` pushed | `publish.yml` → `reusable-docker.yml` (rust job only) |
+| Action | Jobs triggered |
+|--------|----------------|
+| Push to any branch with `go/**` changes | `go-ci.yml` → `ci` only |
+| Push to `main` with `go/**` changes | `go-ci.yml` → `ci` → `release` → `publish` (if new tag) |
+| Push to any branch with `node-js/**` changes | `node-ci.yml` → `ci` only |
+| Push to `main` with `node-js/**` changes | `node-ci.yml` → `ci` → `release` → `publish` (if new tag) |
+| Push to any branch with `python/**` changes | `python-ci.yml` → `ci` only |
+| Push to `main` with `python/**` changes | `python-ci.yml` → `ci` → `release` → `publish` (if new tag) |
+| Push to any branch with `rust/**` changes | `rust-ci.yml` → `ci` only |
+| Push to `main` with `rust/**` changes | `rust-ci.yml` → `ci` → `release` → `publish` (if new tag) |
+| Tag `*-v*` pushed manually | `publish.yml` → `reusable-docker.yml` (matching service only) |
 
 ---
 
@@ -85,9 +85,9 @@ To view details of a run:
 
 ---
 
-## Step 3 — Test the Release Workflow
+## Step 3 — Test the Release and Publish Jobs
 
-The release workflow triggers on every push to `main`. Use a scoped conventional commit so semantic-release detects a version bump for the target service.
+Release and publish are embedded in each service CI file and only run on `main`. Merge or push a scoped conventional commit to `main`:
 
 ```sh
 git switch main && git pull
@@ -97,13 +97,14 @@ git commit -m "fix(go): correct health check response message"
 git push origin main
 ```
 
-Monitor the release run in the GitHub Actions UI:
+Monitor the run in the GitHub Actions UI:
 
 1. Go to the **Actions** tab
-2. Click **Release** in the left sidebar
-3. Click the latest run to open it
-4. The matrix shows 4 parallel jobs — expand the `go` job to see semantic-release output
-5. A successful release prints: `Published release X.X.X`
+2. Click **Go CI** in the left sidebar
+3. Open the latest run — it shows three jobs: **ci**, **Release**, **Publish Docker Image**
+4. Expand **Release** to see semantic-release output — a successful release prints `Published release X.X.X`
+5. If a tag was created, **Publish Docker Image** runs next and pushes the image to GHCR
+6. If no releasable commits exist, **Publish Docker Image** is skipped (grey)
 
 Verify the tag was created:
 
@@ -115,9 +116,9 @@ git tag -l "go-v*"
 Or on GitHub: go to **Code** → **Tags** and confirm a `go-v*` tag appears.
 
 **Pass criteria:**
-- `release.yml` runs a matrix of 4 jobs (one per service)
-- Only the `go` job creates a new tag (others find no releasable commits)
-- A `go-v*` tag appears under **Code → Tags**
+- `Go CI` run shows all three jobs: ci ✓, Release ✓, Publish Docker Image ✓ (or skipped if no releasable commit)
+- A `go-v*` tag appears under **Code → Tags** when a releasable commit was pushed
+- Only the Go service pipeline triggers — Node, Python, Rust are not affected
 
 ---
 

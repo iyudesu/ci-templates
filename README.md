@@ -39,17 +39,16 @@ repo-root/
 │   └── Dockerfile
 │
 ├── .github/workflows/
-│   ├── go-ci.yml
+│   ├── go-ci.yml            # full pipeline: ci → release → publish
 │   ├── node-ci.yml
 │   ├── python-ci.yml
 │   ├── rust-ci.yml
-│   ├── release.yml
-│   ├── publish.yml
-│   ├── reusable-go.yml
+│   ├── publish.yml          # manual re-publish via tag push
+│   ├── reusable-go.yml      # lint + build + test
 │   ├── reusable-node.yml
 │   ├── reusable-python.yml
 │   ├── reusable-rust.yml
-│   └── reusable-docker.yml
+│   └── reusable-docker.yml  # docker build & push
 │
 ├── .releaserc.go.json
 ├── .releaserc.node-js.json
@@ -70,48 +69,48 @@ repo-root/
 
 ## CI/CD Flow
 
+Each service CI file runs the **full pipeline** as three sequential jobs:
+
 ```
-git push (feature)
+push to any branch (service or workflow files changed)
     ↓
-Service-specific CI (lint + build + test)
-    ↓
-merge to main
-    ↓
-semantic-release (per service)
-    ↓
-Git tag created (e.g., node-v1.2.0)
-    ↓
-publish workflow triggered
-    ↓
-Docker image pushed to GHCR
+[job: ci]  lint (warn-only) → build → test
+    ↓ (main branch only)
+[job: release]  semantic-release → creates tag (e.g. go-v1.2.0)
+    ↓ (only if new tag was created)
+[job: publish]  docker build & push to GHCR
 ```
+
+On feature branches only the `ci` job runs. `release` and `publish` are skipped.
 
 ---
 
 # ⚙️ CI Workflows
 
-Each service has its own CI pipeline:
+Each service has its own self-contained pipeline:
 
-| Service | Workflow        |
-| ------- | --------------- |
-| Go      | `go-ci.yml`     |
-| Node.js | `node-ci.yml`   |
-| Python  | `python-ci.yml` |
-| Rust    | `rust-ci.yml`   |
+| Service | Workflow | Jobs |
+| ------- | -------- | ---- |
+| Go      | `go-ci.yml`     | ci → release → publish |
+| Node.js | `node-ci.yml`   | ci → release → publish |
+| Python  | `python-ci.yml` | ci → release → publish |
+| Rust    | `rust-ci.yml`   | ci → release → publish |
 
 ### Features
 
-* ✅ Path-based triggers (only run when service changes)
-* ✅ Linting 
+* ✅ Path-based triggers — fires on service files or its own workflow files
+* ✅ Lint (warn-only, `continue-on-error: true`)
   - [golangci-lint](https://github.com/golangci/golangci-lint) (Go)
-  - [eslint](https://github.com/eslint/eslint) (Node.js) to use ESlint, need Node.js version ^20.19.0, ^22.13.0, or >=24
+  - [eslint](https://github.com/eslint/eslint) (Node.js, requires `^20.19.0`, `^22.x`, or `>=24`)
   - [flake8](https://github.com/PyCQA/flake8) (Python)
   - [clippy](https://github.com/rust-lang/rust-clippy) (Rust)
-* ✅ Build + Test
-  - For Go, using built-in test 
-  - [vitest](https://github.com/vitest-dev/vitest) (Node.js)
-  - [pytest](https://docs.pytest.org) (Python)
-  - For Rust, using built-in test 
+* ✅ Build + Test (blocking)
+  - Go: `go build`, `go test`
+  - Node.js: `npm run build` (Babel), [vitest](https://github.com/vitest-dev/vitest)
+  - Python: [pytest](https://docs.pytest.org)
+  - Rust: `cargo build`, `cargo test`
+* ✅ Release — semantic-release on `main` push, skipped on feature branches
+* ✅ Publish — Docker image to GHCR, only when a new tag is created
 * ✅ Dependency caching
 
 ---
@@ -191,16 +190,6 @@ feat(python): add worker
 | `fix:`      | Patch   |
 | `feat:`     | Minor   |
 | `feat!:`    | Major   |
-
----
-
-# 🚀 Release Workflow
-
-File: `.github/workflows/release.yml`
-
-* Runs on `main`
-* Executes semantic-release per service
-* Creates Git tags automatically
 
 ---
 

@@ -15,5 +15,55 @@ on:
       - '.github/workflows/reusable-go.yml'
 
 jobs:
-  call:
+  ci:
     uses: ./.github/workflows/reusable-go.yml
+
+  release:
+    name: Release
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      new_tag: ${{ steps.release.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install release tooling
+        run: npm ci
+
+      - name: Run semantic-release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BEFORE=$(git tag -l "go-v*" --sort=-version:refname | head -1)
+          npx semantic-release --extends ./.releaserc.go.json
+          git fetch --tags
+          AFTER=$(git tag -l "go-v*" --sort=-version:refname | head -1)
+          if [ "$BEFORE" != "$AFTER" ] && [ -n "$AFTER" ]; then
+            echo "new_tag=$AFTER" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    name: Publish Docker Image
+    needs: release
+    if: needs.release.outputs.new_tag != ''
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-docker.yml
+    secrets: inherit
+    with:
+      service: go
+      version: ${{ needs.release.outputs.new_tag }}

@@ -6,6 +6,10 @@ on:
       service:
         required: true
         type: string
+      version:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   docker:
@@ -14,10 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Resolve version
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Login GHCR

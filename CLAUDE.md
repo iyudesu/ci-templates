@@ -58,20 +58,16 @@ All four services are identical in behavior: Express/Flask/Actix/net-http server
 The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime (e.g., created by an init container or startup script in Kubernetes).
 
 ### CI/CD Flow
+Each service CI file (`go-ci.yml` etc.) runs three sequential jobs:
+
 ```
 push to any branch (service files or its workflow files changed)
-    → service-specific CI (go-ci.yml / node-ci.yml / python-ci.yml / rust-ci.yml)
-        → delegates to reusable-<service>.yml
-            → lint (continue-on-error) → build → test
-
-merge to main
-    → release.yml
-        → semantic-release per service → creates per-service tag (e.g. go-v1.2.0)
-            → publish.yml
-                → reusable-docker.yml (build & push to GHCR)
+    → [job: ci]      reusable-<service>.yml → lint (warn) → build → test
+    → [job: release] main only — semantic-release → tag e.g. go-v1.2.0
+    → [job: publish] only if new tag — reusable-docker.yml → push to GHCR
 ```
 
-Each CI workflow triggers when files under its service directory **or** its own workflow files change (e.g. `go/**`, `.github/workflows/go-ci.yml`, `.github/workflows/reusable-go.yml`). Lint steps use `continue-on-error: true` — failures are reported as warnings but do not block build or test.
+`release` and `publish` jobs are skipped on feature branches. Lint uses `continue-on-error: true` — warnings do not block build or test. `publish.yml` still exists for manual re-publishing via a tag push.
 
 ### Reusable Workflows
 Named `reusable-<service>.yml` and `reusable-docker.yml`, all at the top level of `.github/workflows/`. GitHub Actions requires local `./` workflow references to be at the top level — subdirectories are not supported for local paths. Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
