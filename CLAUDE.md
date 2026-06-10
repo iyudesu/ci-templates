@@ -58,19 +58,24 @@ All four services are identical in behavior: Express/Flask/Actix/net-http server
 The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime (e.g., created by an init container or startup script in Kubernetes).
 
 ### CI/CD Flow
-Each service CI file (`go-ci.yml` etc.) runs three sequential jobs:
+Each service CI file (`go-ci.yml` etc.) runs five sequential jobs:
 
 ```
 push to any branch (service files or its workflow files changed)
-    → [job: ci]      reusable-<service>.yml → lint (warn) → build → test
-    → [job: release] main only — semantic-release → tag e.g. go-v1.2.0
-    → [job: publish] only if new tag — reusable-docker.yml → push to GHCR
+    → [job: lint]    reusable-<service>-lint.yml   — warn-only (continue-on-error)
+    → [job: build]   reusable-<service>-build.yml  — blocking
+    → [job: test]    reusable-<service>-test.yml   — blocking
+    → [job: release] reusable-release.yml           — main only, semantic-release → tag
+    → [job: publish] reusable-publish.yml           — only if new tag, push to GHCR
 ```
 
-`release` and `publish` jobs are skipped on feature branches. Lint uses `continue-on-error: true` — warnings do not block build or test. `publish.yml` still exists for manual re-publishing via a tag push.
+`release` and `publish` are skipped on feature branches. `publish.yml` still exists for manual re-publishing via a direct tag push.
 
 ### Reusable Workflows
-Named `reusable-<service>.yml` and `reusable-docker.yml`, all at the top level of `.github/workflows/`. GitHub Actions requires local `./` workflow references to be at the top level — subdirectories are not supported for local paths. Each is a `workflow_call` target consumed by the service-specific CI files. The docker workflow accepts a `service` input that maps to the folder name and image name.
+All at the top level of `.github/workflows/` (GitHub Actions requires local `./` workflow references to be at the top level). Each CI stage has its own dedicated reusable file:
+
+- **Per-language**: `reusable-<service>-lint.yml`, `reusable-<service>-build.yml`, `reusable-<service>-test.yml`
+- **Shared**: `reusable-release.yml` (inputs: `service`, `releaserc`, `tag_pattern`; output: `new_tag`), `reusable-publish.yml` (inputs: `service`, `version`)
 
 ### Docker Images
 Published to `ghcr.io/<owner>/<repo>/<service>:<tag>` on per-service tag push (`go-v*`, `node-v*`, etc.). Authentication uses the built-in `GITHUB_TOKEN` — no manual secret setup needed. Required workflow permissions: `contents: read`, `packages: write`.
@@ -90,6 +95,7 @@ The scope (`go`, `node`, `python`, `rust`) determines which service gets a new v
 ## Adding a New Service
 
 1. Create `/<service>/` with a `Dockerfile` and build/test config
-2. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
-3. Add `.github/workflows/reusable-<service>.yml` (the actual lint/build/test steps)
-4. Add `<service>` as a new job in `publish.yml` calling `reusable-docker.yml`
+2. Add `reusable-<service>-lint.yml`, `reusable-<service>-build.yml`, `reusable-<service>-test.yml`
+3. Add `.github/workflows/<service>-ci.yml` calling all five reusable stages; pass `service`, `releaserc`, and `tag_pattern` to `reusable-release.yml`
+4. Create `.releaserc.<service>.json` with scoped `releaseRules` and `tagFormat: "<service>-v${version}"`
+5. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`

@@ -1,12 +1,11 @@
-name: Reusable Node CI
+name: Reusable Node Lint
 
 on:
   workflow_call:
 
 jobs:
-  node:
+  lint:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -16,22 +15,8 @@ jobs:
           cache: npm
           cache-dependency-path: node-js/package-lock.json
 
-      - run: |
-          cd node-js
-          npm ci
+      - run: cd node-js && npm ci
 
       - name: Lint
         continue-on-error: true
-        run: |
-          cd node-js
-          npx eslint .
-
-      - name: Build
-        run: |
-          cd node-js
-          npm run build
-
-      - name: Test
-        run: |
-          cd node-js
-          npx vitest run
+        run: cd node-js && npx eslint .

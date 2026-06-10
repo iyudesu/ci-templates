@@ -1,12 +1,11 @@
-name: Reusable Go CI
+name: Reusable Go Lint
 
 on:
   workflow_call:
 
 jobs:
-  go:
+  lint:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -15,18 +14,8 @@ jobs:
           go-version: '1.23'
           cache: true
 
-      - name: Lint (golangci-lint)
+      - name: Lint
         uses: golangci/golangci-lint-action@v6
         continue-on-error: true
         with:
           working-directory: go
-
-      - name: Build
-        run: |
-          cd go
-          go build ./...
-
-      - name: Test
-        run: |
-          cd go
-          go test ./...

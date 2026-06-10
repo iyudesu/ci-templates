@@ -4,15 +4,15 @@
 
 | Action | Jobs triggered |
 |--------|----------------|
-| Push to any branch with `go/**` changes | `go-ci.yml` → `ci` only |
-| Push to `main` with `go/**` changes | `go-ci.yml` → `ci` → `release` → `publish` (if new tag) |
-| Push to any branch with `node-js/**` changes | `node-ci.yml` → `ci` only |
-| Push to `main` with `node-js/**` changes | `node-ci.yml` → `ci` → `release` → `publish` (if new tag) |
-| Push to any branch with `python/**` changes | `python-ci.yml` → `ci` only |
-| Push to `main` with `python/**` changes | `python-ci.yml` → `ci` → `release` → `publish` (if new tag) |
-| Push to any branch with `rust/**` changes | `rust-ci.yml` → `ci` only |
-| Push to `main` with `rust/**` changes | `rust-ci.yml` → `ci` → `release` → `publish` (if new tag) |
-| Tag `*-v*` pushed manually | `publish.yml` → `reusable-docker.yml` (matching service only) |
+| Push to any branch with `go/**` changes | `go-ci.yml` → `lint` → `build` → `test` only |
+| Push to `main` with `go/**` changes | `go-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
+| Push to any branch with `node-js/**` changes | `node-ci.yml` → `lint` → `build` → `test` only |
+| Push to `main` with `node-js/**` changes | `node-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
+| Push to any branch with `python/**` changes | `python-ci.yml` → `lint` → `build` → `test` only |
+| Push to `main` with `python/**` changes | `python-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
+| Push to any branch with `rust/**` changes | `rust-ci.yml` → `lint` → `build` → `test` only |
+| Push to `main` with `rust/**` changes | `rust-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
+| Tag `*-v*` pushed manually | `publish.yml` → `reusable-publish.yml` (matching service only) |
 
 ---
 
@@ -73,15 +73,15 @@ Monitor runs in the GitHub Actions UI:
 To view details of a run:
 
 1. Click the workflow run name (e.g. **Go CI**)
-2. Click the `call` job to expand it
-3. Click into the reusable workflow job to see each step (Lint / Build / Test)
-4. A red ✗ on any step means it failed — click the step to expand the log
+2. You will see five jobs in sequence: **lint**, **build**, **test**, **Release** (skipped on feature branches), **Publish Docker Image** (skipped)
+3. Click any job to expand its steps
+4. A red ✗ means the job failed — click the step to expand the log
 
 **Pass criteria:**
 - 4 separate workflow runs appear, one per service
-- Each run calls its reusable workflow (visible as a nested job)
-- Lint step may show as yellow ⚠ (warning) due to `continue-on-error: true` — this is expected
-- Build and test steps must be green ✓ — these are blocking and will fail the job if they error
+- Each run shows 5 jobs: lint, build, test, Release (skipped), Publish Docker Image (skipped)
+- `lint` job may show as yellow ⚠ (warning) due to `continue-on-error: true` — this is expected
+- `build` and `test` jobs must be green ✓ — these are blocking
 
 ---
 
@@ -101,7 +101,7 @@ Monitor the run in the GitHub Actions UI:
 
 1. Go to the **Actions** tab
 2. Click **Go CI** in the left sidebar
-3. Open the latest run — it shows three jobs: **ci**, **Release**, **Publish Docker Image**
+3. Open the latest run — it shows five jobs: **lint**, **build**, **test**, **Release**, **Publish Docker Image**
 4. Expand **Release** to see semantic-release output — a successful release prints `Published release X.X.X`
 5. If a tag was created, **Publish Docker Image** runs next and pushes the image to GHCR
 6. If no releasable commits exist, **Publish Docker Image** is skipped (grey)
@@ -116,7 +116,7 @@ git tag -l "go-v*"
 Or on GitHub: go to **Code** → **Tags** and confirm a `go-v*` tag appears.
 
 **Pass criteria:**
-- `Go CI` run shows all three jobs: ci ✓, Release ✓, Publish Docker Image ✓ (or skipped if no releasable commit)
+- `Go CI` run shows all five jobs: lint ✓, build ✓, test ✓, Release ✓, Publish Docker Image ✓ (or skipped if no releasable commit)
 - A `go-v*` tag appears under **Code → Tags** when a releasable commit was pushed
 - Only the Go service pipeline triggers — Node, Python, Rust are not affected
 
@@ -141,7 +141,7 @@ Inspect the run:
 
 1. Open the **Publish Images** run in the **Actions** tab
 2. Confirm only the **go** job ran — `node`, `python`, and `rust` jobs should show as **skipped** (grey, not green or red)
-3. Inside the `go` job, expand **Build & Push** to confirm the image was pushed to GHCR
+3. Inside the `docker` job, expand **Build & Push** to confirm the image was pushed to GHCR
 
 Verify the image exists:
 

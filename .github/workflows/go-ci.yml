@@ -6,54 +6,43 @@ on:
     paths:
       - 'go/**'
       - '.github/workflows/go-ci.yml'
-      - '.github/workflows/reusable-go.yml'
+      - '.github/workflows/reusable-go-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
   pull_request:
     branches: ['**', '!main']
     paths:
       - 'go/**'
       - '.github/workflows/go-ci.yml'
-      - '.github/workflows/reusable-go.yml'
+      - '.github/workflows/reusable-go-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
 
 jobs:
-  ci:
-    uses: ./.github/workflows/reusable-go.yml
+  lint:
+    uses: ./.github/workflows/reusable-go-lint.yml
+
+  build:
+    needs: lint
+    uses: ./.github/workflows/reusable-go-build.yml
+
+  test:
+    needs: build
+    uses: ./.github/workflows/reusable-go-test.yml
 
   release:
     name: Release
-    needs: ci
+    needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
       pull-requests: write
-    outputs:
-      new_tag: ${{ steps.release.outputs.new_tag }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install release tooling
-        run: npm ci
-
-      - name: Run semantic-release
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BEFORE=$(git tag -l "go-v*" --sort=-version:refname | head -1)
-          npx semantic-release --extends ./.releaserc.go.json
-          git fetch --tags
-          AFTER=$(git tag -l "go-v*" --sort=-version:refname | head -1)
-          if [ "$BEFORE" != "$AFTER" ] && [ -n "$AFTER" ]; then
-            echo "new_tag=$AFTER" >> "$GITHUB_OUTPUT"
-          fi
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      service: go
+      releaserc: .releaserc.go.json
+      tag_pattern: go-v*
 
   publish:
     name: Publish Docker Image
@@ -62,7 +51,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/reusable-docker.yml
+    uses: ./.github/workflows/reusable-publish.yml
     secrets: inherit
     with:
       service: go

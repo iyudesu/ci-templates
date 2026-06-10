@@ -1,12 +1,11 @@
-name: Reusable Python CI
+name: Reusable Python Test
 
 on:
   workflow_call:
 
 jobs:
-  python:
+  test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -19,19 +18,13 @@ jobs:
           path: ~/.cache/pip
           key: pip-${{ hashFiles('python/requirements.txt') }}
 
-      - run: |
-          cd python
-          pip install -r requirements.txt
-
-      - name: Lint
-        continue-on-error: true
+      - name: Install dependencies
         run: |
           cd python
-          pip install flake8
-          flake8
+          pip install -r requirements.txt
+          pip install pytest
 
       - name: Test
         run: |
           cd python
-          pip install pytest
           pytest
