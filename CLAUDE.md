@@ -69,11 +69,11 @@ push to develop / feature/** / release/** / hotfix/** (service files or workflow
 PR opened/updated → main / develop / release/**
     → same lint → build → test (no release)
 
-PR merged → main
+push to main (i.e. a PR merged into main)
     → lint → build → test → release → publish
 ```
 
-`release` and `publish` fire only when a PR is merged into `main` — direct pushes to `main` are intentionally not triggered (Gitflow enforces PRs). `publish.yml` still exists for manual re-publishing via a direct tag push.
+`release` and `publish` fire on a push to `main`. Merging a PR into `main` produces exactly such a push, so in practice they run on merge. The "no direct pushes" guarantee comes from GitHub **branch protection** (require a PR before merging), not the workflow trigger — semantic-release cannot run inside a `pull_request` event (`env-ci` flags it as a PR and refuses to publish), so the release must be driven by the `push` event. `publish.yml` still exists for manual re-publishing via a direct tag push.
 
 ### Reusable Workflows
 All at the top level of `.github/workflows/` (GitHub Actions requires local `./` workflow references to be at the top level). Each CI stage has its own dedicated reusable file:

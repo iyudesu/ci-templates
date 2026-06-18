@@ -92,7 +92,7 @@ push to develop / feature/** / release/** / hotfix/**
 PR opened or updated → main / develop / release/**
     ↓ same lint → build → test (release and publish skipped)
 
-PR merged → main
+push to main (a merged PR produces this push)
     ↓ lint → build → test
     ↓
 [job: release]  semantic-release → creates tag (e.g. go-v1.2.0)
@@ -100,7 +100,7 @@ PR merged → main
 [job: publish]  docker build & push to GHCR
 ```
 
-Direct pushes to `main` do **not** trigger CI — Gitflow enforces all changes via pull requests.
+Release and publish run on a **push to `main`**. Merging a PR into `main` is what produces that push, so they effectively run on merge. semantic-release cannot run inside a `pull_request` event (it detects the PR and refuses to publish), so the release is driven by the `push` event instead. Enforce "no direct pushes to main" with GitHub **branch protection** (require a PR before merging).
 
 ---
 
