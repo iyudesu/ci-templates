@@ -7,7 +7,8 @@
         { "scope": "node", "breaking": true, "release": "major" },
         { "scope": "node", "type": "feat", "release": "minor" },
         { "scope": "node", "type": "fix", "release": "patch" },
-        { "scope": "node", "type": "perf", "release": "patch" }
+        { "scope": "node", "type": "perf", "release": "patch" },
+        { "scope": "!(node)", "release": false }
       ]
     }],
     "@semantic-release/release-notes-generator",

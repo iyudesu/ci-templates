@@ -24,10 +24,13 @@ jobs:
         id: version
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+            RAW="${{ inputs.version }}"
           else
-            VERSION=${GITHUB_REF#refs/tags/}
+            RAW="${GITHUB_REF#refs/tags/}"
           fi
+          # Strip the leading "<service>-v" tag prefix -> bare semver
+          # e.g. node-v1.2.3 -> 1.2.3
+          VERSION="${RAW#*-v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Login GHCR

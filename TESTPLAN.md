@@ -21,10 +21,11 @@ hotfix/*      ← urgent production fixes (branch from main, merge into main + d
 | Push to `develop` | lint → build → test | No |
 | Push to `release/**` | lint → build → test | No |
 | Push to `hotfix/**` | lint → build → test | No |
-| Push to `main` directly | **not triggered** (enforce PRs) | No |
 | PR opened/updated → `develop` or `release/**` | lint → build → test | No |
 | PR opened/updated → `main` | lint → build → test | No |
-| PR **merged** → `main` | lint → build → test → release → publish | Yes (on new tag) |
+| Push to `main` (i.e. a merged PR) | lint → build → test → release → publish | Yes (on new tag) |
+
+> **Note:** Release runs on the `push` to `main`, not on the PR-merge event. semantic-release refuses to run inside a `pull_request` event (`env-ci` flags it as a PR), so it must be driven by the push that a merge produces. Block direct pushes to `main` with GitHub **branch protection** (Settings → Branches → require a PR before merging).
 
 ---
 
@@ -34,10 +35,9 @@ hotfix/*      ← urgent production fixes (branch from main, merge into main + d
 |--------|----------------|
 | Push to `feature/**` with `go/**` changes | `go-ci.yml` → lint → build → test |
 | Push to `develop` with `go/**` changes | `go-ci.yml` → lint → build → test |
-| Push to `main` directly | **no trigger** — direct pushes to main are not allowed |
 | PR opened/updated from `feature/*` → `develop` | lint → build → test per changed service |
 | PR opened/updated from `release/*` → `main` | lint → build → test per changed service |
-| PR **merged** from any branch → `main` | lint → build → test → release → publish (if new tag) |
+| Push to `main` (a merged PR) with `go/**` changes | lint → build → test → release → publish (if new tag) |
 | Tag `*-v*` pushed manually | `publish.yml` → `reusable-publish.yml` (matching service only) |
 
 Same pattern applies for `node-js/**`, `python/**`, `rust/**`.
@@ -133,7 +133,7 @@ In the **Actions** tab, confirm CI runs again — the `pull_request` trigger fir
 
 ## Step 4 — Test merge to main (Release and Publish)
 
-The full pipeline only fires when a PR is **merged** into `main` — direct pushes to `main` do not trigger CI. Use a scoped conventional commit so semantic-release creates a tag:
+The full pipeline (including release + publish) fires on a **push to `main`**. Merging a PR into `main` produces that push, so this is the normal release path. Use a scoped conventional commit so semantic-release creates a tag:
 
 ```sh
 git switch develop && git pull
