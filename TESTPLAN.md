@@ -77,6 +77,10 @@ Simulate a developer working on a feature branch:
 # Start from develop (create it locally if it doesn't exist)
 git switch -c develop 2>/dev/null || git switch develop
 
+# Push develop to remote so it can be the PR base in Step 3.
+# Without a remote develop branch, GitHub has nothing to compare against.
+git push origin develop
+
 # Create a feature branch
 git switch -c feature/ci-test
 
@@ -113,7 +117,9 @@ To view details of a run:
 
 ## Step 3 — Test PR Trigger (feature → develop)
 
-Open a pull request from `feature/ci-test` → `develop`:
+Open a pull request from `feature/ci-test` → `develop`.
+
+> **Prerequisite:** `develop` must exist on the remote (pushed in Step 2). GitHub can only compare two branches that both exist on the remote — without a remote `develop`, the base dropdown has nothing to select.
 
 1. On GitHub, go to **Pull requests** → **New pull request**
 2. Set base: `develop`, compare: `feature/ci-test`
