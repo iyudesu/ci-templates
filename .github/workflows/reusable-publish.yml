@@ -1,4 +1,4 @@
-name: Reusable Docker
+name: Reusable Publish
 
 on:
   workflow_call:
@@ -6,22 +6,32 @@ on:
       service:
         required: true
         type: string
+      version:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   docker:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Resolve version
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Login GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build & Push
         run: |

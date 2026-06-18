@@ -2,18 +2,68 @@ name: Go CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
     paths:
       - 'go/**'
       - '.github/workflows/go-ci.yml'
-      - '.github/workflows/reusable-go.yml'
+      - '.github/workflows/reusable-go-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
   pull_request:
-    branches: ['**', '!main']
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - develop
+      - 'release/**'
     paths:
       - 'go/**'
       - '.github/workflows/go-ci.yml'
-      - '.github/workflows/reusable-go.yml'
+      - '.github/workflows/reusable-go-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
 
 jobs:
-  call:
-    uses: ./.github/workflows/reusable-go.yml
+  lint:
+    uses: ./.github/workflows/reusable-go-lint.yml
+
+  build:
+    needs: lint
+    uses: ./.github/workflows/reusable-go-build.yml
+
+  test:
+    needs: build
+    uses: ./.github/workflows/reusable-go-test.yml
+
+  release:
+    name: Release
+    needs: test
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      service: go
+      releaserc: .releaserc.go.json
+      tag_pattern: go-v*
+
+  publish:
+    name: Publish Docker Image
+    needs: release
+    if: needs.release.outputs.new_tag != ''
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-publish.yml
+    secrets: inherit
+    with:
+      service: go
+      version: ${{ needs.release.outputs.new_tag }}

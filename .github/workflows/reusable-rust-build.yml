@@ -1,12 +1,11 @@
-name: Reusable Rust CI
+name: Reusable Rust Build
 
 on:
   workflow_call:
 
 jobs:
-  rust:
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -19,21 +18,8 @@ jobs:
           key: cargo-${{ hashFiles('rust/Cargo.lock') }}
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Lint
-        continue-on-error: true
-        run: |
-          cd rust
-          cargo clippy -- -D warnings
 
       - name: Build
         run: |
           cd rust
           cargo build --release
-
-      - name: Test
-        run: |
-          cd rust
-          cargo test

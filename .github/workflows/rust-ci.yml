@@ -2,18 +2,68 @@ name: Rust CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
     paths:
       - 'rust/**'
       - '.github/workflows/rust-ci.yml'
-      - '.github/workflows/reusable-rust.yml'
+      - '.github/workflows/reusable-rust-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
   pull_request:
-    branches: ['**', '!main']
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - develop
+      - 'release/**'
     paths:
       - 'rust/**'
       - '.github/workflows/rust-ci.yml'
-      - '.github/workflows/reusable-rust.yml'
+      - '.github/workflows/reusable-rust-*.yml'
+      - '.github/workflows/reusable-release.yml'
+      - '.github/workflows/reusable-publish.yml'
 
 jobs:
-  call:
-    uses: ./.github/workflows/reusable-rust.yml
+  lint:
+    uses: ./.github/workflows/reusable-rust-lint.yml
+
+  build:
+    needs: lint
+    uses: ./.github/workflows/reusable-rust-build.yml
+
+  test:
+    needs: build
+    uses: ./.github/workflows/reusable-rust-test.yml
+
+  release:
+    name: Release
+    needs: test
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      service: rust
+      releaserc: .releaserc.rust.json
+      tag_pattern: rust-v*
+
+  publish:
+    name: Publish Docker Image
+    needs: release
+    if: needs.release.outputs.new_tag != ''
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-publish.yml
+    secrets: inherit
+    with:
+      service: rust
+      version: ${{ needs.release.outputs.new_tag }}

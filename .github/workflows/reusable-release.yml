@@ -1,0 +1,53 @@
+name: Reusable Release
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      releaserc:
+        required: true
+        type: string
+      tag_pattern:
+        required: true
+        type: string
+    outputs:
+      new_tag:
+        description: New version tag created by semantic-release, empty if none
+        value: ${{ jobs.release.outputs.new_tag }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      new_tag: ${{ steps.release.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install release tooling
+        run: npm ci
+
+      - name: Run semantic-release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BEFORE=$(git tag -l "${{ inputs.tag_pattern }}" --sort=-version:refname | head -1)
+          npx semantic-release --extends "./${{ inputs.releaserc }}"
+          git fetch --tags
+          AFTER=$(git tag -l "${{ inputs.tag_pattern }}" --sort=-version:refname | head -1)
+          if [ "$BEFORE" != "$AFTER" ] && [ -n "$AFTER" ]; then
+            echo "new_tag=$AFTER" >> "$GITHUB_OUTPUT"
+          fi

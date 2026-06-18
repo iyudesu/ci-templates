@@ -39,17 +39,25 @@ repo-root/
 │   └── Dockerfile
 │
 ├── .github/workflows/
-│   ├── go-ci.yml
+│   ├── go-ci.yml            # full pipeline: lint → build → test → release → publish
 │   ├── node-ci.yml
 │   ├── python-ci.yml
 │   ├── rust-ci.yml
-│   ├── release.yml
-│   ├── publish.yml
-│   ├── reusable-go.yml
-│   ├── reusable-node.yml
-│   ├── reusable-python.yml
-│   ├── reusable-rust.yml
-│   └── reusable-docker.yml
+│   ├── publish.yml          # manual re-publish via tag push
+│   ├── reusable-go-lint.yml
+│   ├── reusable-go-build.yml
+│   ├── reusable-go-test.yml
+│   ├── reusable-node-lint.yml
+│   ├── reusable-node-build.yml
+│   ├── reusable-node-test.yml
+│   ├── reusable-python-lint.yml
+│   ├── reusable-python-build.yml
+│   ├── reusable-python-test.yml
+│   ├── reusable-rust-lint.yml
+│   ├── reusable-rust-build.yml
+│   ├── reusable-rust-test.yml
+│   ├── reusable-release.yml  # shared: semantic-release (parameterised by service)
+│   └── reusable-publish.yml  # shared: docker build & push
 │
 ├── .releaserc.go.json
 ├── .releaserc.node-js.json
@@ -70,71 +78,81 @@ repo-root/
 
 ## CI/CD Flow
 
+Each service CI file runs the **full pipeline** as five sequential jobs:
+
 ```
-git push (feature)
+push to develop / feature/** / release/** / hotfix/**
     ↓
-Service-specific CI (lint + build + test)
+[job: lint]   lint (warn-only, continue-on-error)
     ↓
-merge to main
+[job: build]  compile / transpile / install deps
     ↓
-semantic-release (per service)
+[job: test]   run test suite    ← release and publish are skipped
+
+PR opened or updated → main / develop / release/**
+    ↓ same lint → build → test (release and publish skipped)
+
+PR merged → main
+    ↓ lint → build → test
     ↓
-Git tag created (e.g., node-v1.2.0)
-    ↓
-publish workflow triggered
-    ↓
-Docker image pushed to GHCR
+[job: release]  semantic-release → creates tag (e.g. go-v1.2.0)
+    ↓ (only if new tag was created)
+[job: publish]  docker build & push to GHCR
 ```
+
+Direct pushes to `main` do **not** trigger CI — Gitflow enforces all changes via pull requests.
 
 ---
 
 # ⚙️ CI Workflows
 
-Each service has its own CI pipeline:
+Each service has its own self-contained pipeline:
 
-| Service | Workflow        |
-| ------- | --------------- |
-| Go      | `go-ci.yml`     |
-| Node.js | `node-ci.yml`   |
-| Python  | `python-ci.yml` |
-| Rust    | `rust-ci.yml`   |
+| Service | Workflow | Jobs |
+| ------- | -------- | ---- |
+| Go      | `go-ci.yml`     | lint → build → test → release → publish |
+| Node.js | `node-ci.yml`   | lint → build → test → release → publish |
+| Python  | `python-ci.yml` | lint → build → test → release → publish |
+| Rust    | `rust-ci.yml`   | lint → build → test → release → publish |
 
 ### Features
 
-* ✅ Path-based triggers (only run when service changes)
-* ✅ Linting 
+* ✅ Path-based triggers — fires on service files or its own workflow files
+* ✅ Lint (warn-only, `continue-on-error: true`)
   - [golangci-lint](https://github.com/golangci/golangci-lint) (Go)
-  - [eslint](https://github.com/eslint/eslint) (Node.js) to use ESlint, need Node.js version ^20.19.0, ^22.13.0, or >=24
+  - [eslint](https://github.com/eslint/eslint) (Node.js, requires `^20.19.0`, `^22.x`, or `>=24`)
   - [flake8](https://github.com/PyCQA/flake8) (Python)
   - [clippy](https://github.com/rust-lang/rust-clippy) (Rust)
-* ✅ Build + Test
-  - For Go, using built-in test 
-  - [vitest](https://github.com/vitest-dev/vitest) (Node.js)
-  - [pytest](https://docs.pytest.org) (Python)
-  - For Rust, using built-in test 
+* ✅ Build + Test (blocking)
+  - Go: `go build`, `go test`
+  - Node.js: `npm run build` (Babel), [vitest](https://github.com/vitest-dev/vitest)
+  - Python: [pytest](https://docs.pytest.org)
+  - Rust: `cargo build`, `cargo test`
+* ✅ Release — semantic-release on `main` push, skipped on feature branches
+* ✅ Publish — Docker image to GHCR, only when a new tag is created
 * ✅ Dependency caching
 
 ---
 
 # 🔁 Reusable Workflows
 
-Located at the top level of `.github/workflows/`, named with a `reusable-` prefix:
+Each CI stage has its own dedicated reusable workflow file, located at the top level of `.github/workflows/` with a `reusable-` prefix:
 
-```
-reusable-go.yml
-reusable-node.yml
-reusable-python.yml
-reusable-rust.yml
-reusable-docker.yml
-```
+| Stage | Files |
+| ----- | ----- |
+| Lint  | `reusable-go-lint.yml`, `reusable-node-lint.yml`, `reusable-python-lint.yml`, `reusable-rust-lint.yml` |
+| Build | `reusable-go-build.yml`, `reusable-node-build.yml`, `reusable-python-build.yml`, `reusable-rust-build.yml` |
+| Test  | `reusable-go-test.yml`, `reusable-node-test.yml`, `reusable-python-test.yml`, `reusable-rust-test.yml` |
+| Release | `reusable-release.yml` (shared — accepts `service`, `releaserc`, `tag_pattern` inputs) |
+| Publish | `reusable-publish.yml` (shared — accepts `service`, `version` inputs) |
 
 > **Why top-level?** GitHub Actions only supports local `./` reusable workflow references at the top level of `.github/workflows/`. Subdirectories are not supported for local paths — they require the full `owner/repo/...@ref` format instead.
 
-Purpose:
+Benefits of per-stage reusable workflows:
 
-* Avoid duplication
-* Standardize CI logic
-* Easy to scale
+* Each stage can be inspected, re-run, or replaced independently
+* Release and publish logic is shared across all four services via `reusable-release.yml` and `reusable-publish.yml`
+* Clear separation of concerns in the Actions UI (five distinct jobs per run)
 
 ---
 
@@ -191,16 +209,6 @@ feat(python): add worker
 | `fix:`      | Patch   |
 | `feat:`     | Minor   |
 | `feat!:`    | Major   |
-
----
-
-# 🚀 Release Workflow
-
-File: `.github/workflows/release.yml`
-
-* Runs on `main`
-* Executes semantic-release per service
-* Creates Git tags automatically
 
 ---
 
@@ -264,12 +272,11 @@ permissions:
 # 🧩 Adding a New Service
 
 1. Create `/<service>/` with source code, `Dockerfile`, and build/test config
-2. Add test file (`test_*.py`, `*.test.js`, etc.)
-3. Add `.github/workflows/<service>-ci.yml` (path-triggered, calls reusable)
-4. Add `.github/workflows/reusable-<service>.yml` (lint / build / test steps)
-5. Create `.releaserc.<service>.json` with scoped release rules and `tagFormat`
-6. Add `<service>` to the `matrix` in `release.yml`
-7. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`
+2. Add a test file (`test_*.py`, `*.test.js`, etc.)
+3. Add `reusable-<service>-lint.yml`, `reusable-<service>-build.yml`, `reusable-<service>-test.yml`
+4. Add `.github/workflows/<service>-ci.yml` — call the three stage reusables, then call `reusable-release.yml` and `reusable-publish.yml` with the service-specific inputs
+5. Create `.releaserc.<service>.json` with scoped release rules and `tagFormat: "<service>-v${version}"`
+6. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`
 
 ---
 

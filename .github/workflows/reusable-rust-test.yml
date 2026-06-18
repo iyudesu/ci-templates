@@ -1,0 +1,25 @@
+name: Reusable Rust Test
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: cargo-${{ hashFiles('rust/Cargo.lock') }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: |
+          cd rust
+          cargo test

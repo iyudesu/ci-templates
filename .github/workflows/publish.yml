@@ -11,24 +11,24 @@ on:
 jobs:
   go:
     if: startsWith(github.ref, 'refs/tags/go-v')
-    uses: ./.github/workflows/reusable-docker.yml
+    uses: ./.github/workflows/reusable-publish.yml
     with:
       service: go
 
   node:
     if: startsWith(github.ref, 'refs/tags/node-v')
-    uses: ./.github/workflows/reusable-docker.yml
+    uses: ./.github/workflows/reusable-publish.yml
     with:
       service: node-js
 
   python:
     if: startsWith(github.ref, 'refs/tags/python-v')
-    uses: ./.github/workflows/reusable-docker.yml
+    uses: ./.github/workflows/reusable-publish.yml
     with:
       service: python
 
   rust:
     if: startsWith(github.ref, 'refs/tags/rust-v')
-    uses: ./.github/workflows/reusable-docker.yml
+    uses: ./.github/workflows/reusable-publish.yml
     with:
       service: rust
