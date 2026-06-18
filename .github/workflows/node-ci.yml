@@ -2,7 +2,11 @@ name: Node CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
     paths:
       - 'node-js/**'
       - '.github/workflows/node-ci.yml'
@@ -10,7 +14,11 @@ on:
       - '.github/workflows/reusable-release.yml'
       - '.github/workflows/reusable-publish.yml'
   pull_request:
-    branches: ['**', '!main']
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - develop
+      - 'release/**'
     paths:
       - 'node-js/**'
       - '.github/workflows/node-ci.yml'
@@ -33,7 +41,10 @@ jobs:
   release:
     name: Release
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
     permissions:
       contents: write
       issues: write

@@ -81,20 +81,26 @@ repo-root/
 Each service CI file runs the **full pipeline** as five sequential jobs:
 
 ```
-push to any branch (service or workflow files changed)
+push to develop / feature/** / release/** / hotfix/**
     ↓
 [job: lint]   lint (warn-only, continue-on-error)
     ↓
 [job: build]  compile / transpile / install deps
     ↓
-[job: test]   run test suite
-    ↓ (main branch only)
+[job: test]   run test suite    ← release and publish are skipped
+
+PR opened or updated → main / develop / release/**
+    ↓ same lint → build → test (release and publish skipped)
+
+PR merged → main
+    ↓ lint → build → test
+    ↓
 [job: release]  semantic-release → creates tag (e.g. go-v1.2.0)
     ↓ (only if new tag was created)
 [job: publish]  docker build & push to GHCR
 ```
 
-On feature branches only `lint`, `build`, and `test` run. `release` and `publish` are skipped.
+Direct pushes to `main` do **not** trigger CI — Gitflow enforces all changes via pull requests.
 
 ---
 

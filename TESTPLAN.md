@@ -1,18 +1,46 @@
-# Test Plan — CI/CD Workflow Validation
+# Test Plan — CI/CD Workflow Validation (Gitflow)
+
+## Gitflow Branching Model
+
+```
+main          ← stable production releases only
+  ↑ merge via PR
+release/*     ← release preparation (RC testing)
+  ↑ branch from / merge into
+develop       ← integration branch, next release
+  ↑ merge via PR
+feature/*     ← new features
+hotfix/*      ← urgent production fixes (branch from main, merge into main + develop)
+```
+
+### Branch CI Behaviour
+
+| Event | CI stages triggered | Release & Publish |
+|-------|--------------------|--------------------|
+| Push to `feature/**` | lint → build → test | No |
+| Push to `develop` | lint → build → test | No |
+| Push to `release/**` | lint → build → test | No |
+| Push to `hotfix/**` | lint → build → test | No |
+| Push to `main` directly | **not triggered** (enforce PRs) | No |
+| PR opened/updated → `develop` or `release/**` | lint → build → test | No |
+| PR opened/updated → `main` | lint → build → test | No |
+| PR **merged** → `main` | lint → build → test → release → publish | Yes (on new tag) |
+
+---
 
 ## Trigger Reference
 
 | Action | Jobs triggered |
 |--------|----------------|
-| Push to any branch with `go/**` changes | `go-ci.yml` → `lint` → `build` → `test` only |
-| Push to `main` with `go/**` changes | `go-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
-| Push to any branch with `node-js/**` changes | `node-ci.yml` → `lint` → `build` → `test` only |
-| Push to `main` with `node-js/**` changes | `node-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
-| Push to any branch with `python/**` changes | `python-ci.yml` → `lint` → `build` → `test` only |
-| Push to `main` with `python/**` changes | `python-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
-| Push to any branch with `rust/**` changes | `rust-ci.yml` → `lint` → `build` → `test` only |
-| Push to `main` with `rust/**` changes | `rust-ci.yml` → `lint` → `build` → `test` → `release` → `publish` (if new tag) |
+| Push to `feature/**` with `go/**` changes | `go-ci.yml` → lint → build → test |
+| Push to `develop` with `go/**` changes | `go-ci.yml` → lint → build → test |
+| Push to `main` directly | **no trigger** — direct pushes to main are not allowed |
+| PR opened/updated from `feature/*` → `develop` | lint → build → test per changed service |
+| PR opened/updated from `release/*` → `main` | lint → build → test per changed service |
+| PR **merged** from any branch → `main` | lint → build → test → release → publish (if new tag) |
 | Tag `*-v*` pushed manually | `publish.yml` → `reusable-publish.yml` (matching service only) |
+
+Same pattern applies for `node-js/**`, `python/**`, `rust/**`.
 
 ---
 
@@ -41,60 +69,76 @@ yamllint .github/workflows/
 
 ---
 
-## Step 2 — Test CI Workflows (lint + build + test)
+## Step 2 — Test Feature Branch CI (lint + build + test)
 
-Create a test branch and push a small change per service to trigger each CI pipeline independently.
+Simulate a developer working on a feature branch:
 
 ```sh
-git switch -c test/ci-validation
+# Start from develop (create it locally if it doesn't exist)
+git switch -c develop 2>/dev/null || git switch develop
 
-# Trigger Go CI
-touch go/.ci-test && git add go/.ci-test && git commit -m "test(go): trigger CI"
+# Create a feature branch
+git switch -c feature/ci-test
 
-# Trigger Node CI
-touch node-js/.ci-test && git add node-js/.ci-test && git commit -m "test(node): trigger CI"
+# Make a small change per service to trigger CI
+touch go/.ci-test        && git add go/.ci-test        && git commit -m "test(go): trigger CI"
+touch node-js/.ci-test   && git add node-js/.ci-test   && git commit -m "test(node): trigger CI"
+touch python/.ci-test    && git add python/.ci-test    && git commit -m "test(python): trigger CI"
+touch rust/.ci-test      && git add rust/.ci-test      && git commit -m "test(rust): trigger CI"
 
-# Trigger Python CI
-touch python/.ci-test && git add python/.ci-test && git commit -m "test(python): trigger CI"
-
-# Trigger Rust CI
-touch rust/.ci-test && git add rust/.ci-test && git commit -m "test(rust): trigger CI"
-
-git push origin test/ci-validation
+git push origin feature/ci-test
 ```
 
 Monitor runs in the GitHub Actions UI:
 
 1. Go to your repository on GitHub
 2. Click the **Actions** tab
-3. Filter by branch: use the branch dropdown and select `test/ci-validation`
+3. Use the branch dropdown and select `feature/ci-test`
 4. Confirm 4 separate workflow runs appear — one per service
 
 To view details of a run:
 
 1. Click the workflow run name (e.g. **Go CI**)
-2. You will see five jobs in sequence: **lint**, **build**, **test**, **Release** (skipped on feature branches), **Publish Docker Image** (skipped)
+2. You will see five jobs: **lint**, **build**, **test**, **Release** (skipped), **Publish Docker Image** (skipped)
 3. Click any job to expand its steps
 4. A red ✗ means the job failed — click the step to expand the log
 
 **Pass criteria:**
 - 4 separate workflow runs appear, one per service
-- Each run shows 5 jobs: lint, build, test, Release (skipped), Publish Docker Image (skipped)
-- `lint` job may show as yellow ⚠ (warning) due to `continue-on-error: true` — this is expected
-- `build` and `test` jobs must be green ✓ — these are blocking
+- Each run shows 5 jobs: lint ✓/⚠, build ✓, test ✓, Release ⊘ (skipped), Publish ⊘ (skipped)
+- `lint` may show yellow ⚠ due to `continue-on-error: true` — expected
+- `build` and `test` must be green ✓
 
 ---
 
-## Step 3 — Test the Release and Publish Jobs
+## Step 3 — Test PR Trigger (feature → develop)
 
-Release and publish are embedded in each service CI file and only run on `main`. Merge or push a scoped conventional commit to `main`:
+Open a pull request from `feature/ci-test` → `develop`:
+
+1. On GitHub, go to **Pull requests** → **New pull request**
+2. Set base: `develop`, compare: `feature/ci-test`
+3. Submit the PR
+
+In the **Actions** tab, confirm CI runs again — the `pull_request` trigger fires for PRs targeting `develop`.
+
+**Pass criteria:** Same 4 workflow runs appear, `release` and `publish` skipped.
+
+---
+
+## Step 4 — Test merge to main (Release and Publish)
+
+The full pipeline only fires when a PR is **merged** into `main` — direct pushes to `main` do not trigger CI. Use a scoped conventional commit so semantic-release creates a tag:
 
 ```sh
-git switch main && git pull
+git switch develop && git pull
 
-# Make a real change to a service file, then commit with a scoped message
+# Make a real change to a service file
+echo "# test" >> go/README.md
+git add go/README.md
 git commit -m "fix(go): correct health check response message"
-git push origin main
+git push origin develop
+
+# Open a PR from develop → main on GitHub, then merge it
 ```
 
 Monitor the run in the GitHub Actions UI:
@@ -122,15 +166,31 @@ Or on GitHub: go to **Code** → **Tags** and confirm a `go-v*` tag appears.
 
 ---
 
-## Step 4 — Test the Publish Workflow
+## Step 5 — Test Hotfix Flow
 
-If Step 3 succeeded, the `go-v*` tag push auto-triggers `publish.yml`. To verify:
+Hotfixes branch from `main` and merge back into both `main` and `develop`:
 
-1. Go to the **Actions** tab
-2. Click **Publish Images** in the left sidebar
-3. Open the latest run triggered by the `go-v*` tag
+```sh
+git switch main && git pull
+git switch -c hotfix/fix-critical-bug
 
-To trigger manually without going through semantic-release:
+# Make the fix with a scoped commit
+git commit -m "fix(go): patch critical nil pointer"
+git push origin hotfix/fix-critical-bug
+```
+
+1. Open PR: `hotfix/fix-critical-bug` → `main`
+2. CI runs lint + build + test (pass criteria same as Step 2)
+3. After merging to `main`, release + publish fire automatically (same as Step 4)
+4. Also open PR: `hotfix/fix-critical-bug` → `develop` to keep it in sync
+
+**Pass criteria:** CI passes on the hotfix branch; after merge to `main`, release is created.
+
+---
+
+## Step 6 — Test the Publish Workflow (Manual Tag)
+
+To trigger `publish.yml` directly without going through semantic-release:
 
 ```sh
 git tag go-v0.0.1-test
@@ -140,7 +200,7 @@ git push origin go-v0.0.1-test
 Inspect the run:
 
 1. Open the **Publish Images** run in the **Actions** tab
-2. Confirm only the **go** job ran — `node`, `python`, and `rust` jobs should show as **skipped** (grey, not green or red)
+2. Confirm only the **go** job ran — `node`, `python`, and `rust` jobs show as **skipped** (grey)
 3. Inside the `docker` job, expand **Build & Push** to confirm the image was pushed to GHCR
 
 Verify the image exists:
@@ -154,40 +214,15 @@ Verify the image exists:
 
 ---
 
-## Step 5 — Verify PR Trigger Behavior
-
-The CI workflows currently exclude PRs targeting `main`:
-
-```yaml
-pull_request:
-  branches: ['**', '!main']
-```
-
-This means opening a PR to `main` does **not** trigger CI — only the post-merge push does.
-
-To test this behavior:
-
-1. Open a PR from `test/ci-validation` → `main` on GitHub
-2. Go to the **Actions** tab and confirm no new CI run appears for the PR
-3. The PR status checks section should show no pending checks
-
-If pre-merge CI on `main` PRs is required, update each `*-ci.yml`:
-
-```yaml
-pull_request:
-  branches: ['**']   # remove the '!main' exclusion
-```
-
----
-
 ## Cleanup
 
-Remove test branches and tags:
+Remove test branches and tags after validation:
 
 ```sh
-git push origin --delete test/ci-validation
+git push origin --delete feature/ci-test
+git push origin --delete hotfix/fix-critical-bug
 git tag -d go-v0.0.1-test
 git push origin --delete go-v0.0.1-test
 ```
 
-On GitHub, confirm the branch and tag are gone under **Code → Branches** and **Code → Tags**.
+On GitHub, confirm the branches and tags are gone under **Code → Branches** and **Code → Tags**.

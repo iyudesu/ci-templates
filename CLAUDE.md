@@ -61,15 +61,19 @@ The liveness/readiness probe pattern relies on `/tmp/ready` existing at runtime 
 Each service CI file (`go-ci.yml` etc.) runs five sequential jobs:
 
 ```
-push to any branch (service files or its workflow files changed)
+push to develop / feature/** / release/** / hotfix/** (service files or workflow files changed)
     → [job: lint]    reusable-<service>-lint.yml   — warn-only (continue-on-error)
     → [job: build]   reusable-<service>-build.yml  — blocking
     → [job: test]    reusable-<service>-test.yml   — blocking
-    → [job: release] reusable-release.yml           — main only, semantic-release → tag
-    → [job: publish] reusable-publish.yml           — only if new tag, push to GHCR
+
+PR opened/updated → main / develop / release/**
+    → same lint → build → test (no release)
+
+PR merged → main
+    → lint → build → test → release → publish
 ```
 
-`release` and `publish` are skipped on feature branches. `publish.yml` still exists for manual re-publishing via a direct tag push.
+`release` and `publish` fire only when a PR is merged into `main` — direct pushes to `main` are intentionally not triggered (Gitflow enforces PRs). `publish.yml` still exists for manual re-publishing via a direct tag push.
 
 ### Reusable Workflows
 All at the top level of `.github/workflows/` (GitHub Actions requires local `./` workflow references to be at the top level). Each CI stage has its own dedicated reusable file:
