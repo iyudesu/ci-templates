@@ -101,5 +101,5 @@ The scope (`go`, `node`, `python`, `rust`) determines which service gets a new v
 1. Create `/<service>/` with a `Dockerfile` and build/test config
 2. Add `reusable-<service>-lint.yml`, `reusable-<service>-build.yml`, `reusable-<service>-test.yml`
 3. Add `.github/workflows/<service>-ci.yml` calling all five reusable stages; pass `service`, `releaserc`, and `tag_pattern` to `reusable-release.yml`
-4. Create `.releaserc.<service>.json` with scoped `releaseRules` and `tagFormat: "<service>-v${version}"`
+4. Create `.releaserc.<service>.json` with scoped `releaseRules`, a `{ "scope": "!(<service>)", "release": false }` veto so other scopes can't trigger this service, and `tagFormat: "<service>-v${version}"`
 5. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`

@@ -275,7 +275,7 @@ permissions:
 2. Add a test file (`test_*.py`, `*.test.js`, etc.)
 3. Add `reusable-<service>-lint.yml`, `reusable-<service>-build.yml`, `reusable-<service>-test.yml`
 4. Add `.github/workflows/<service>-ci.yml` — call the three stage reusables, then call `reusable-release.yml` and `reusable-publish.yml` with the service-specific inputs
-5. Create `.releaserc.<service>.json` with scoped release rules and `tagFormat: "<service>-v${version}"`
+5. Create `.releaserc.<service>.json` with scoped release rules, a `{ "scope": "!(<service>)", "release": false }` veto (so commits from other scopes can't release this service), and `tagFormat: "<service>-v${version}"`
 6. Add a new job with `if: startsWith(github.ref, 'refs/tags/<service>-v')` in `publish.yml`
 
 ---
