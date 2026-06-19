@@ -359,4 +359,4 @@ This monorepo provides:
 
 # 📄 License
 
-
+MIT
