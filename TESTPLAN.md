@@ -136,7 +136,7 @@ In the **Actions** tab, confirm CI runs again — the `pull_request` trigger fir
 The full pipeline (including release + publish) fires on a **push to `main`**. Merging a PR into `main` produces that push, so this is the normal release path. Use a scoped conventional commit so semantic-release creates a tag:
 
 ```sh
-git switch develop && git pull
+git switch develop && git fetch && git pull
 
 # Make a real change to a service file
 echo "# test" >> go/README.md
