@@ -13,6 +13,11 @@ jobs:
         with:
           python-version: 3.12
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-flake8-${{ runner.os }}
+
       - name: Lint
         continue-on-error: true
         run: |
